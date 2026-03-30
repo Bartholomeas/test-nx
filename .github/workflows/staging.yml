@@ -1,0 +1,82 @@
+name: staging
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Which app to deploy (leave empty for affected only)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - users2-backend
+          - mng-admin-backend
+          - all
+  push:
+    branches:
+      - staging
+
+env:
+  ENV: STAGING
+  AWS_REGION: us-east-1
+
+jobs:
+  params:
+    name: Setup Dynamic Environment Variables
+    runs-on: ubuntu-latest
+    outputs:
+      secrets_env: ${{ env.SECRETS_ENV }}
+    steps:
+      - run: |
+          echo "SECRETS_ENV=${{ env.ENV }}" >> $GITHUB_ENV
+
+  detect:
+    runs-on: ubuntu-latest
+    outputs:
+      users2: ${{ steps.check.outputs.users2 }}
+      mng-admin: ${{ steps.check.outputs.mng-admin }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-fund
+
+      - uses: nrwl/nx-set-shas@v4
+
+      - name: Detect affected apps
+        id: check
+        run: |
+          if [ "${{ github.event.inputs.app }}" = "all" ]; then
+            echo "users2=true" >> $GITHUB_OUTPUT
+            echo "mng-admin=true" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.inputs.app }}" ]; then
+            echo "users2=$([[ "${{ github.event.inputs.app }}" == "users2-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "mng-admin=$([[ "${{ github.event.inputs.app }}" == "mng-admin-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+          else
+            AFFECTED=$(npx nx show projects --affected --type=app)
+            echo "users2=$([[ "$AFFECTED" == *"users2-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "mng-admin=$([[ "$AFFECTED" == *"mng-admin-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+          fi
+
+  users2-backend:
+    needs: [detect, params]
+    if: needs.detect.outputs.users2 == true
+    uses: ./.github/workflows/build.yml
+    with:
+      secrets_env: ${{ needs.params.outputs.secrets_env }}
+      app_name: users2-backend
+    secrets: inherit
+
+  mng-admin-backend:
+    needs: [detect]
+    if: needs.detect.outputs.mng-admin == true
+    uses: ./.github/workflows/build.yml
+    with:
+      secrets_env: ${{ needs.params.outputs.secrets_env }}
+      app_name: mng-admin-backend
+    secrets: inherit

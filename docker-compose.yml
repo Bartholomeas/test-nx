@@ -1,0 +1,36 @@
+services:
+  users2-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: users2-backend
+    ports:
+      - '8000:8000'
+    env_file:
+      - ./apps/users2-backend/.env
+
+  mng-admin-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: mng-admin-backend
+    ports:
+      - '8001:8001'
+    env_file:
+      - ./apps/mng-admin-backend/.env
+
+  postgres:
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+volumes:
+  postgres:
