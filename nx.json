@@ -49,8 +49,9 @@
     },
     "changelog": {
       "automaticFromRef": true,
-      "projectChangelogs": true,
-      "createRelease": "github"
+      "projectChangelogs": {
+        "createRelease": "github"
+      }
     },
     "git": {
       "commitMessage": "chore(release): {projectName}@{version}",
