@@ -65,6 +65,8 @@ jobs:
       - run: npm ci --no-fund
 
       - uses: nrwl/nx-set-shas@v4
+        with:
+          main-branch-name: development
 
       - name: Detect affected apps
         id: check
