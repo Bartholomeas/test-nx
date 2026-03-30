@@ -1,23 +1,21 @@
-import {
-  ClassSerializerInterceptor,
-  Logger,
-  ValidationPipe,
-} from '@nestjs/common';
-import { NestFactory, Reflector } from '@nestjs/core';
-import { AppModule } from './app/app.module';
-import { ConfigService } from '@nestjs/config';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import helmet from 'helmet';
+
+import { ClassSerializerInterceptor, Logger, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { NestFactory, Reflector } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
+import { AppModule } from './app/app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   // const globalPrefix = 'api';
-  // app.setGlobalPrefix(globalPrefix);
   const configService = app.get(ConfigService);
+  // app.setGlobalPrefix(globalPrefix);
 
   const NODE_ENV = configService.getOrThrow('NODE_ENV');
   const APP_PORT = configService.get('PORT');
-  
+
   // TODO: Add proper origins when they will be available
   const CORS_ORIGINS = {
     local: '*',
@@ -55,9 +53,7 @@ async function bootstrap() {
   );
 
   await app.listen(APP_PORT);
-  Logger.log(
-    `🚀 Application is running on: http://localhost:${APP_PORT}`,
-  );
+  Logger.log(`🚀 Application is running on: http://localhost:${APP_PORT}`);
 }
 
 bootstrap();
