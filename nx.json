@@ -44,7 +44,8 @@
     "projectsRelationship": "independent",
     "projects": ["users2-backend", "mng-admin-backend"],
     "version": {
-      "conventionalCommits": true
+      "conventionalCommits": true,
+      "fallbackCurrentVersionResolver": "disk"
     },
     "changelog": {
       "projectChangelogs": true
