@@ -1,3 +1,13 @@
+## 0.4.0 (2026-03-30)
+
+### 🚀 Features
+
+- **users2-backend:** remove comments ([c0421e5](https://github.com/Bartholomeas/test-nx/commit/c0421e5))
+
+### ❤️ Thank You
+
+- Bartosz Stefaniak
+
 ## 0.3.0 (2026-03-30)
 
 ### 🚀 Features
