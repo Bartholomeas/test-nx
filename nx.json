@@ -48,6 +48,7 @@
       "fallbackCurrentVersionResolver": "disk"
     },
     "changelog": {
+      "automaticFromRef": true,
       "projectChangelogs": true
     },
     "git": {
