@@ -50,6 +50,9 @@ jobs:
     needs: [check-release]
     if: needs.check-release.outputs.is_release != 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
     outputs:
       users2: ${{ steps.check.outputs.users2 }}
       mng-admin: ${{ steps.check.outputs.mng-admin }}
@@ -67,6 +70,16 @@ jobs:
       - uses: nrwl/nx-set-shas@v4
         with:
           main-branch-name: development
+          workflow-id: ci.yml
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Nx affected debug (merge-base and changed files)
+        run: |
+          echo "NX_BASE=$NX_BASE"
+          echo "NX_HEAD=$NX_HEAD"
+          MB=$(git merge-base "$NX_BASE" "$NX_HEAD")
+          echo "merge-base=$MB"
+          git diff --name-only "$MB" "$NX_HEAD"
 
       - name: Detect affected apps
         id: check
@@ -78,14 +91,14 @@ jobs:
             echo "users2=$([[ "${{ github.event.inputs.app }}" == "users2-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
             echo "mng-admin=$([[ "${{ github.event.inputs.app }}" == "mng-admin-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
           else
-            AFFECTED=$(npx nx show projects --affected --type=app)
+            AFFECTED=$(npx nx show projects --affected --type=app --base "$NX_BASE" --head "$NX_HEAD")
             echo "users2=$([[ "$AFFECTED" == *"users2-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
             echo "mng-admin=$([[ "$AFFECTED" == *"mng-admin-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
           fi
 
   users2-backend:
     needs: [detect, params]
-    if: needs.detect.outputs.users2 == true
+    if: needs.detect.outputs.users2 == 'true'
     uses: ./.github/workflows/build.yml
     with:
       secrets_env: ${{ needs.params.outputs.secrets_env }}
@@ -94,7 +107,7 @@ jobs:
 
   mng-admin-backend:
     needs: [detect]
-    if: needs.detect.outputs.mng-admin == true
+    if: needs.detect.outputs.mng-admin == 'true'
     uses: ./.github/workflows/build.yml
     with:
       secrets_env: ${{ needs.params.outputs.secrets_env }}
