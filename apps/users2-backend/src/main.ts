@@ -12,6 +12,9 @@ async function bootstrap() {
   // const globalPrefix = 'api';
   const configService = app.get(ConfigService);
   // app.setGlobalPrefix(globalPrefix);
+  // app.setGlobalPrefix(globalPrefix);
+  // app.setGlobalPrefix(globalPrefix);
+  // app.setGlobalPrefix(globalPrefix);
 
   const NODE_ENV = configService.getOrThrow('NODE_ENV');
   const APP_PORT = configService.get('PORT');
