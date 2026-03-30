@@ -54,6 +54,7 @@ async function bootstrap() {
 
   await app.listen(APP_PORT);
   Logger.log(`🚀 Application is running on: http://localhost:${APP_PORT}`);
+  Logger.log(`Environment: ${NODE_ENV}`);
 }
 
 bootstrap();
