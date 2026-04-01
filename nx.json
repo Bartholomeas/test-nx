@@ -55,8 +55,8 @@
       }
     },
     "git": {
-      "commitMessage": "chore(release): {projectName}@{version}",
-      "tagPattern": "{projectName}@{version}"
+      "commit": false,
+      "tag": false
     }
   }
 }
