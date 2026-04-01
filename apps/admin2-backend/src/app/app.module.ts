@@ -4,17 +4,16 @@ import { LoggerModule } from 'nestjs-pino';
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
-import { AuthModule } from '../features/auth/auth.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 @Module({
   imports: [
     CommonModule,
     ConfigModule.forRoot({}),
     LoggerModule.forRoot(createLoggerModuleConfig(IS_PRODUCTION)),
-    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

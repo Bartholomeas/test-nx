@@ -10,16 +10,27 @@ services:
     env_file:
       - ./apps/users2-backend/.env
 
-  mng-admin-backend:
+  manage2-backend:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        APP_NAME: mng-admin-backend
+        APP_NAME: manage2-backend
     ports:
       - '8001:8001'
     env_file:
-      - ./apps/mng-admin-backend/.env
+      - ./apps/manage2-backend/.env
+
+  admin2-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: admin2-backend
+    ports:
+      - '8002:8002'
+    env_file:
+      - ./apps/admin2-backend/.env
 
   postgres:
     image: postgres:latest

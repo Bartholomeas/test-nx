@@ -54,11 +54,7 @@ export class AuthController {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.json({
-      accessToken: tempAccessToken,
-      refreshToken: tempRefreshToken,
-      expiresIn,
-    } satisfies LoginResponseDto);
+    this.logger.log('LOGIN RESPONSE SENT.....');
 
     return {
       accessToken: 'token',

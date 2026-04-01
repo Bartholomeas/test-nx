@@ -37,12 +37,13 @@
       "plugin": "@nx/jest/plugin",
       "options": {
         "targetName": "test"
-      }
+      },
+      "exclude": ["apps/admin2-backend-e2e/**/*"]
     }
   ],
   "release": {
     "projectsRelationship": "independent",
-    "projects": ["users2-backend", "mng-admin-backend"],
+    "projects": ["users2-backend", "manage2-backend", "admin2-backend"],
     "version": {
       "conventionalCommits": true,
       "fallbackCurrentVersionResolver": "disk"
@@ -54,8 +55,8 @@
       }
     },
     "git": {
-      "commitMessage": "chore(release): {projectName}@{version}",
-      "tagPattern": "{projectName}@{version}"
+      "commit": false,
+      "tag": false
     }
   }
 }

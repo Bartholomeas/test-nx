@@ -1,16 +1,16 @@
 {
-  "name": "mng-admin-backend",
+  "name": "admin2-backend",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
-  "sourceRoot": "apps/mng-admin-backend/src",
+  "sourceRoot": "apps/admin2-backend/src",
   "projectType": "application",
-  "tags": [],
+  "tags": ["type:app", "scope:admin", "platform:server"],
   "targets": {
     "build": {
       "executor": "nx:run-commands",
       "options": {
         "command": "webpack-cli build",
         "args": ["--node-env=production"],
-        "cwd": "apps/mng-admin-backend"
+        "cwd": "apps/admin2-backend"
       },
       "configurations": {
         "development": {
@@ -23,8 +23,8 @@
       "cache": true,
       "executor": "@nx/js:prune-lockfile",
       "outputs": [
-        "{workspaceRoot}/dist/apps/mng-admin-backend/package.json",
-        "{workspaceRoot}/dist/apps/mng-admin-backend/package-lock.json"
+        "{workspaceRoot}/dist/apps/admin2-backend/package.json",
+        "{workspaceRoot}/dist/apps/admin2-backend/package-lock.json"
       ],
       "options": {
         "buildTarget": "build"
@@ -33,9 +33,7 @@
     "copy-workspace-modules": {
       "dependsOn": ["build"],
       "cache": true,
-      "outputs": [
-        "{workspaceRoot}/dist/apps/mng-admin-backend/workspace_modules"
-      ],
+      "outputs": ["{workspaceRoot}/dist/apps/admin2-backend/workspace_modules"],
       "executor": "@nx/js:copy-workspace-modules",
       "options": {
         "buildTarget": "build"
@@ -51,15 +49,15 @@
       "defaultConfiguration": "development",
       "dependsOn": ["build"],
       "options": {
-        "buildTarget": "mng-admin-backend:build",
+        "buildTarget": "admin2-backend:build",
         "runBuildTargetDependencies": false
       },
       "configurations": {
         "development": {
-          "buildTarget": "mng-admin-backend:build:development"
+          "buildTarget": "admin2-backend:build:development"
         },
         "production": {
-          "buildTarget": "mng-admin-backend:build:production"
+          "buildTarget": "admin2-backend:build:production"
         }
       }
     },
