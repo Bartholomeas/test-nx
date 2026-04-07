@@ -46,8 +46,7 @@
     "projectsRelationship": "independent",
     "projects": ["users2-backend", "manage2-backend", "admin2-backend"],
     "version": {
-      "specifierSource": "conventional-commits",
-      "currentVersionResolver": "disk"
+      "conventionalCommits": true
     },
     "changelog": {
       "automaticFromRef": true,
@@ -57,7 +56,8 @@
     },
     "git": {
       "commit": false,
-      "tag": false
+      "tag": false,
+      "tagPattern": "dev-{projectName}@{version}"
     }
   }
 }
