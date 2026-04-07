@@ -15,40 +15,64 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
+      - name: Set NODE_AUTH_TOKEN dynamically
+        id: set-node-auth
+        run: |
+          if [ -n "${{ secrets.NPM_ORG_TOKEN }}" ]; then
+          echo "NODE_AUTH_TOKEN=${{ secrets.NPM_ORG_TOKEN }}" >> $GITHUB_ENV
+          else
+          echo "NODE_AUTH_TOKEN=${{ secrets[format('{0}_NODE_AUTH_TOKEN', inputs.secrets_env)] }}" >> $GITHUB_ENV
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          always-auth: true
+          registry-url: https://registry.npmjs.org
+          scope: '@mono-repo-frontend'
+        env:
+          NODE_AUTH_TOKEN: ${{ env.NODE_AUTH_TOKEN }}
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets[format('{0}_AWS_ACCESS_KEY_ID', inputs.secrets_env)] }}
           aws-secret-access-key: ${{ secrets[format('{0}_AWS_SECRET_ACCESS_KEY', inputs.secrets_env)] }}
           aws-region: us-east-1
-
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
       - run: |
           npm ci --no-fund
-
+      - name: Set repository name
+        run: echo "REPO_NAME=$(basename ${{ github.repository }})" >> $GITHUB_ENV
+      - name: Fetch SSM Parameters
+        id: ssm
+        run: |
+          for param in NEXT_PUBLIC_TEST_ENV; do
+            if value=$(aws ssm get-parameter --name "/${REPO_NAME}/${{ inputs.app_name }}/${param}" --with-decryption --query "Parameter.Value" --output text 2>/dev/null); then
+              echo "${param}=${value}" >> $GITHUB_ENV
+            else
+              echo "Warning: Parameter ${param} not found, skipping..."
+            fi
+          done
+        shell: bash
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:
-          ECR_REGISTRY: ${{ fromJSON(secrets[format('{0}_ECR', inputs.secrets_env)]).app }}
+          ECR_REGISTRY: ${{ fromJSON(secrets[format('{0}_ECR', inputs.secrets_env)])[inputs.app_name] }}
           IMAGE_TAG: ${{ github.sha }}
+          NEXT_PUBLIC_TEST_ENV: ${{ env.NEXT_PUBLIC_TEST_ENV }}
         run: |
-          # Build a docker container and
-          # push it to ECR so that it can
-          # be deployed to ECS.
           ls -l
           echo ECR_REGISTRY:IMAGE_TAG $ECR_REGISTRY:$IMAGE_TAG
-           docker build --build-arg APP_NAME=${{ inputs.app_name }} \
+          docker build \
+            --build-arg APP_NAME=${{ inputs.app_name }} \
+            --build-arg NEXT_PUBLIC_TEST_ENV=${NEXT_PUBLIC_TEST_ENV} \
             -t $ECR_REGISTRY:$IMAGE_TAG .
           docker push $ECR_REGISTRY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-          echo "::set-output name=image::$ECR_REGISTRY:$IMAGE_TAG"
         shell: bash
       - name: Download task definition
         env:
           TASK_DEFINITION_FAMILY: ${{ secrets[format('{0}_TASK_DEFINITION_FAMILY_{1}', inputs.secrets_env, inputs.app_name)] }}
-
         run: |
           aws ecs describe-task-definition --task-definition $TASK_DEFINITION_FAMILY --query taskDefinition | jq -r 'del(
             .taskDefinitionArn,
