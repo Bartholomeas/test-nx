@@ -23,6 +23,7 @@ const CORS_ORIGINS: Record<string, string> = {
   staging: '*',
   production: '*',
 };
+// Comment test, remove it
 
 export async function bootstrapApp({ appModule, swagger }: BootstrapOptions): Promise<void> {
   const app = await NestFactory.create(appModule, { bufferLogs: true });
