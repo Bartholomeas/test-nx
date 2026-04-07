@@ -51,35 +51,38 @@ function createTag(tag: string): boolean {
   return true;
 }
 
+function getHead(): string {
+  return execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
+}
+
 async function releaseDev(): Promise<void> {
+  const headBefore = getHead();
+
   const { projectsVersionData } = await releaseVersion({
     dryRun: false,
-    gitCommit: false,
-    gitTag: false,
-    stageChanges: true,
+    // Push only after we add dev-* tags (same remote update as Nx commit + canonical tags)
+    gitPush: false,
   });
 
-  let created = 0;
+  let devTagsCreated = 0;
   for (const [project, data] of Object.entries(projectsVersionData)) {
     const version = data.newVersion ?? data.currentVersion;
     if (!version) continue;
-    if (createTag(`dev-${project}@${version}`)) created++;
+    if (createTag(`dev-${project}@${version}`)) devTagsCreated++;
   }
 
-  if (created > 0) {
-    // Commit updated package.json versions so next run has correct base
-    execSync('git add apps/*/package.json');
-    execSync(
-      'git commit -m "chore(release): bump versions" --allow-empty --no-verify',
-    );
+  const headAfter = getHead();
+  const nxCommitted = headBefore !== headAfter;
+
+  if (nxCommitted || devTagsCreated > 0) {
     execSync('git push --follow-tags');
   } else {
-    console.log('No new dev tags to push.');
+    console.log('No version changes and no new dev tags; nothing to push.');
   }
 }
 
 async function promoteEnv(): Promise<void> {
-  const prevEnv = PREV_ENV[ENV!];
+  const prevEnv = PREV_ENV[ENV as keyof typeof PREV_ENV];
   let created = 0;
 
   for (const project of PROJECTS) {
@@ -107,7 +110,10 @@ async function promoteEnv(): Promise<void> {
 }
 
 async function generateProdChangelog(): Promise<void> {
-  const versionData: Record<string, { currentVersion: string; newVersion: string }> = {};
+  const versionData: Record<
+    string,
+    { currentVersion: string; newVersion: string; dependentProjects: [] }
+  > = {};
 
   for (const project of PROJECTS) {
     const newVersion = getLatestEnvTag('stg', project);
@@ -117,6 +123,7 @@ async function generateProdChangelog(): Promise<void> {
       versionData[project] = {
         currentVersion: prevProdVersion ?? '0.0.0',
         newVersion,
+        dependentProjects: [],
       };
     }
   }
