@@ -53,7 +53,7 @@
       "git": {
         "commit": true,
         "tag": true,
-        "commitMessage": "chore(release): {projectName}@{version} [no ci]"
+        "commitMessage": "chore(release): bump package versions [no ci]"
       }
     },
     "changelog": {
