@@ -57,7 +57,7 @@ jobs:
       - name: Build, tag, and push image to Amazon ECR
         id: build-image
         env:
-          ECR_REGISTRY: ${{ fromJSON(secrets[format('{0}_ECR', inputs.secrets_env)])[inputs.app_name] }}
+          ECR_REGISTRY: ${{ secrets[format('{0}_ECR_{1}', inputs.secrets_env, inputs.app_name)] }}
           IMAGE_TAG: ${{ github.sha }}
           NEXT_PUBLIC_TEST_ENV: ${{ env.NEXT_PUBLIC_TEST_ENV }}
         run: |
