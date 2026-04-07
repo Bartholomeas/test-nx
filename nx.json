@@ -46,7 +46,7 @@
     "projectsRelationship": "independent",
     "projects": ["users2-backend", "manage2-backend", "admin2-backend"],
     "version": {
-      "conventionalCommits": true,
+      "specifierSource": "conventional-commits",
       "currentVersionResolver": "disk"
     },
     "changelog": {
