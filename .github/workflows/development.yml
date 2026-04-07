@@ -17,6 +17,10 @@ on:
     branches:
       - development
 
+permissions:
+  contents: write
+  actions: read
+
 env:
   ENV: DEVELOPMENT
   AWS_REGION: us-east-1
