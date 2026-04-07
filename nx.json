@@ -47,7 +47,7 @@
     "projects": ["users2-backend", "manage2-backend", "admin2-backend"],
     "version": {
       "conventionalCommits": true,
-      "fallbackCurrentVersionResolver": "disk"
+      "currentVersionResolver": "disk"
     },
     "changelog": {
       "automaticFromRef": true,
