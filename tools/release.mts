@@ -1,6 +1,6 @@
 import { releaseChangelog, releaseVersion } from 'nx/release';
 
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 
 const ENV = process.env['RELEASE_ENV']; // dev | qa | stg | prod
 if (!ENV) {
@@ -51,6 +51,13 @@ function createTag(tag: string): boolean {
   return true;
 }
 
+/** Lightweight env tags are not reliably pushed by `git push --follow-tags` (Nx uses annotated tags). */
+function pushTagRefsToOrigin(tagNames: string[]): void {
+  if (tagNames.length === 0) return;
+  const refs = tagNames.map((t) => `refs/tags/${t}`);
+  execFileSync('git', ['push', 'origin', ...refs], { stdio: 'inherit' });
+}
+
 function getHead(): string {
   return execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
 }
@@ -64,18 +71,20 @@ async function releaseDev(): Promise<void> {
     gitPush: false,
   });
 
-  let devTagsCreated = 0;
+  const newDevTags: string[] = [];
   for (const [project, data] of Object.entries(projectsVersionData)) {
     const version = data.newVersion ?? data.currentVersion;
     if (!version) continue;
-    if (createTag(`dev-${project}@${version}`)) devTagsCreated++;
+    const name = `dev-${project}@${version}`;
+    if (createTag(name)) newDevTags.push(name);
   }
 
   const headAfter = getHead();
   const nxCommitted = headBefore !== headAfter;
 
-  if (nxCommitted || devTagsCreated > 0) {
-    execSync('git push --follow-tags');
+  if (nxCommitted || newDevTags.length > 0) {
+    execSync('git push --follow-tags', { stdio: 'inherit' });
+    pushTagRefsToOrigin(newDevTags);
   } else {
     console.log('No version changes and no new dev tags; nothing to push.');
   }
@@ -83,7 +92,7 @@ async function releaseDev(): Promise<void> {
 
 async function promoteEnv(): Promise<void> {
   const prevEnv = PREV_ENV[ENV as keyof typeof PREV_ENV];
-  let created = 0;
+  const newPromoTags: string[] = [];
 
   for (const project of PROJECTS) {
     const version = getLatestEnvTag(prevEnv, project);
@@ -94,7 +103,7 @@ async function promoteEnv(): Promise<void> {
 
     const tag = `${ENV}-${project}@${version}`;
     console.log(`Promoting: ${prevEnv}-${project}@${version} → ${tag}`);
-    if (createTag(tag)) created++;
+    if (createTag(tag)) newPromoTags.push(tag);
   }
 
   // Prod only: changelog + GitHub release
@@ -102,8 +111,8 @@ async function promoteEnv(): Promise<void> {
     await generateProdChangelog();
   }
 
-  if (created > 0) {
-    execSync('git push --tags');
+  if (newPromoTags.length > 0) {
+    pushTagRefsToOrigin(newPromoTags);
   } else {
     console.log(`No new ${ENV} tags to push.`);
   }
