@@ -1,0 +1,9 @@
+{
+  "name": "shared-aws",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/shared-aws/src",
+  "projectType": "library",
+  "tags": ["type:util", "scope:shared", "platform:server"],
+  "// targets": "to see all targets run: nx show project shared-aws --web",
+  "targets": {}
+}

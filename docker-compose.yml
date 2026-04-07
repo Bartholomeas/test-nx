@@ -39,9 +39,21 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: postgres
+      POSTGRES_DB: portal
     volumes:
-      - postgres:/var/lib/postgresql/data
+      - postgres:/var/lib/postgresql
+
+  postgres-readonly:
+    image: postgres:latest
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_USER: readonly_user
+      POSTGRES_PASSWORD: readonly_pass
+      POSTGRES_DB: portal
+    volumes:
+      - postgres-readonly:/var/lib/postgresql
 
 volumes:
   postgres:
+  postgres-readonly:

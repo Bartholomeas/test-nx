@@ -9,12 +9,17 @@ on:
         type: choice
         options:
           - ''
+          - admin2-backend
+          - manage2-backend
           - users2-backend
-          - mng-admin-backend
           - all
   push:
     branches:
       - qa
+
+permissions:
+  contents: write
+  actions: read
 
 env:
   ENV: QA
@@ -36,8 +41,9 @@ jobs:
       contents: read
       actions: read
     outputs:
-      users2: ${{ steps.check.outputs.users2 }}
-      mng-admin: ${{ steps.check.outputs.mng-admin }}
+      admin2-backend: ${{ steps.check.outputs.admin2-backend }}
+      manage2-backend: ${{ steps.check.outputs.manage2-backend }}
+      users2-backend: ${{ steps.check.outputs.users2-backend }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,85 +53,68 @@ jobs:
         with:
           node-version: 24
           cache: npm
+
       - run: npm ci --no-fund
 
       - uses: nrwl/nx-set-shas@v4
         with:
           main-branch-name: qa
-          workflow-id: ci.yml
           gh-token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Nx affected debug (merge-base and changed files)
-        run: |
-          echo "NX_BASE=$NX_BASE"
-          echo "NX_HEAD=$NX_HEAD"
-          MB=$(git merge-base "$NX_BASE" "$NX_HEAD")
-          echo "merge-base=$MB"
-          git diff --name-only "$MB" "$NX_HEAD"
 
       - name: Detect affected apps
         id: check
         run: |
           if [ "${{ github.event.inputs.app }}" = "all" ]; then
-            echo "users2=true" >> $GITHUB_OUTPUT
-            echo "mng-admin=true" >> $GITHUB_OUTPUT
+            echo "admin2-backend=true" >> $GITHUB_OUTPUT
+            echo "manage2-backend=true" >> $GITHUB_OUTPUT
+            echo "users2-backend=true" >> $GITHUB_OUTPUT
           elif [ -n "${{ github.event.inputs.app }}" ]; then
-            echo "users2=$([[ "${{ github.event.inputs.app }}" == "users2-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
-            echo "mng-admin=$([[ "${{ github.event.inputs.app }}" == "mng-admin-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "admin2-backend=$([[ "${{ github.event.inputs.app }}" == "admin2-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "manage2-backend=$([[ "${{ github.event.inputs.app }}" == "manage2-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "users2-backend=$([[ "${{ github.event.inputs.app }}" == "users2-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
           else
             AFFECTED=$(npx nx show projects --affected --type=app --base "$NX_BASE" --head "$NX_HEAD")
-            echo "users2=$([[ "$AFFECTED" == *"users2-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
-            echo "mng-admin=$([[ "$AFFECTED" == *"mng-admin-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "admin2-backend=$([[ "$AFFECTED" == *"admin2-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "manage2-backend=$([[ "$AFFECTED" == *"manage2-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "users2-backend=$([[ "$AFFECTED" == *"users2-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
           fi
+
+  admin2-backend:
+    needs: [detect, params]
+    if: needs.detect.outputs.admin2-backend == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      secrets_env: ${{ needs.params.outputs.secrets_env }}
+      app_name: admin2-backend
+    secrets: inherit
+
+  manage2-backend:
+    needs: [detect, params]
+    if: needs.detect.outputs.manage2-backend == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      secrets_env: ${{ needs.params.outputs.secrets_env }}
+      app_name: manage2-backend
+    secrets: inherit
 
   users2-backend:
     needs: [detect, params]
-    if: needs.detect.outputs.users2 == 'true'
+    if: needs.detect.outputs.users2-backend == 'true'
     uses: ./.github/workflows/build.yml
     with:
       secrets_env: ${{ needs.params.outputs.secrets_env }}
       app_name: users2-backend
     secrets: inherit
 
-  mng-admin-backend:
-    needs: [detect, params]
-    if: needs.detect.outputs.mng-admin == 'true'
-    uses: ./.github/workflows/build.yml
-    with:
-      secrets_env: ${{ needs.params.outputs.secrets_env }}
-      app_name: mng-admin-backend
-    secrets: inherit
-
   tag:
-    needs: [detect, users2-backend, mng-admin-backend]
+    needs: [detect, admin2-backend, manage2-backend, users2-backend]
     if: |
       always() &&
       needs.detect.result == 'success' &&
-      (needs.users2-backend.result == 'success' || needs.users2-backend.result == 'skipped') &&
-      (needs.mng-admin-backend.result == 'success' || needs.mng-admin-backend.result == 'skipped')
-    runs-on: ubuntu-latest
-    env:
-      HUSKY: '0'
-      RELEASE_ENV: qa
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-
-      - run: npm ci --no-fund
-
-      - name: Configure git
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Tag environment
-        run: npx tsx tools/release.mts
+      (needs.admin2-backend.result == 'success' || needs.admin2-backend.result == 'skipped') &&
+      (needs.manage2-backend.result == 'success' || needs.manage2-backend.result == 'skipped') &&
+      (needs.users2-backend.result == 'success' || needs.users2-backend.result == 'skipped')
+    uses: ./.github/workflows/release.yml
+    with:
+      release_env: qa
+    secrets: inherit
