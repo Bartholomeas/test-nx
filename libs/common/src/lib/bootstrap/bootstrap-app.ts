@@ -23,11 +23,12 @@ const CORS_ORIGINS: Record<string, string> = {
   staging: '*',
   production: '*',
 };
+// Comment test, remove it
 
 export async function bootstrapApp({ appModule, swagger }: BootstrapOptions): Promise<void> {
   const app = await NestFactory.create(appModule, { bufferLogs: true });
   const configService = app.get(ConfigService);
-
+  console.log('bootstraping, test log');
   const NODE_ENV = configService.getOrThrow<string>('NODE_ENV');
   const APP_PORT = configService.getOrThrow<number>('PORT');
 
