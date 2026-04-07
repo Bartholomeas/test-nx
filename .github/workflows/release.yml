@@ -1,18 +1,19 @@
-name: release
+name: Release
 
 on:
-  push:
-    branches:
-      - development
+  workflow_call:
+    inputs:
+      release_env:
+        required: true
+        type: string
+        description: 'Environment prefix for tags (dev | qa | stg | prod)'
 
 jobs:
   release:
-    # Skip if this push is a release commit (avoid infinite loop)
-    if: "!startsWith(github.event.head_commit.message, 'chore(release):')"
     runs-on: ubuntu-latest
     env:
-      # Disable Husky for all steps (pre-push runs nx affected against defaultBase e.g. main, which is not present in CI)
       HUSKY: '0'
+      RELEASE_ENV: ${{ inputs.release_env }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     permissions:
       contents: write
@@ -34,6 +35,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      # Version, changelog, git commit/tag, push (--follow-tags), and GitHub releases when createRelease is set in nx.json
-      - name: Run nx release
-        run: npx nx release --skip-publish
+      - name: Run environment release
+        run: npx tsx tools/release.mts

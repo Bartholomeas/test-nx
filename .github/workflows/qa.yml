@@ -1,4 +1,4 @@
-name: development
+name: qa
 
 on:
   workflow_dispatch:
@@ -15,30 +15,14 @@ on:
           - all
   push:
     branches:
-      - development
+      - qa
 
 env:
-  ENV: DEVELOPMENT
+  ENV: QA
   AWS_REGION: us-east-1
 
 jobs:
-  check-release:
-    runs-on: ubuntu-latest
-    outputs:
-      is_release: ${{ steps.check.outputs.is_release }}
-    steps:
-      - name: Check if release commit
-        id: check
-        run: |
-          if [[ "${{ github.event.head_commit.message }}" == chore\(release\):* ]]; then
-            echo "is_release=true" >> $GITHUB_OUTPUT
-          else
-            echo "is_release=false" >> $GITHUB_OUTPUT
-          fi
-
   params:
-    needs: [check-release]
-    if: needs.check-release.outputs.is_release != 'true'
     name: Setup Dynamic Environment Variables
     runs-on: ubuntu-latest
     outputs:
@@ -48,8 +32,6 @@ jobs:
           echo "SECRETS_ENV=${{ env.ENV }}" >> $GITHUB_ENV
 
   detect:
-    needs: [check-release]
-    if: needs.check-release.outputs.is_release != 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -72,7 +54,7 @@ jobs:
 
       - uses: nrwl/nx-set-shas@v4
         with:
-          main-branch-name: development
+          main-branch-name: qa
           gh-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Detect affected apps
@@ -130,5 +112,5 @@ jobs:
       (needs.users2-backend.result == 'success' || needs.users2-backend.result == 'skipped')
     uses: ./.github/workflows/release.yml
     with:
-      release_env: dev
+      release_env: qa
     secrets: inherit
