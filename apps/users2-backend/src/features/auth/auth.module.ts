@@ -1,10 +1,14 @@
+import { User } from '@mono-repo-backend/database';
+
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { AuthController } from './auth.controller';
-import { AuthService } from './auth.service';
+import { UsersAuthService } from './auth.service';
 
 @Module({
-  imports:[],
+  imports: [TypeOrmModule.forFeature([User])],
   controllers: [AuthController],
-  providers: [AuthService]
+  providers: [UsersAuthService],
 })
 export class AuthModule {}

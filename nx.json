@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "analytics": false,
+  "defaultBase": "development",
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "production": [
@@ -55,8 +56,8 @@
       }
     },
     "git": {
-      "commit": false,
-      "tag": false
+      "commitMessage": "chore(release): {projectName}@{version}",
+      "tagPattern": "{projectName}@{version}"
     }
   }
 }
