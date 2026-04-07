@@ -56,7 +56,7 @@ async function releaseDev(): Promise<void> {
     dryRun: false,
     gitCommit: false,
     gitTag: false,
-    stageChanges: false,
+    stageChanges: true,
   });
 
   let created = 0;
@@ -67,7 +67,12 @@ async function releaseDev(): Promise<void> {
   }
 
   if (created > 0) {
-    execSync('git push --tags');
+    // Commit updated package.json versions so next run has correct base
+    execSync('git add apps/*/package.json');
+    execSync(
+      'git commit -m "chore(release): bump versions" --allow-empty --no-verify',
+    );
+    execSync('git push --follow-tags');
   } else {
     console.log('No new dev tags to push.');
   }
