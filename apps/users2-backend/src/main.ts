@@ -2,6 +2,7 @@ import { bootstrapApp } from '@mono-repo-backend/common';
 
 import { AppModule } from './app/app.module';
 
+// Comment test
 bootstrapApp({
   appModule: AppModule,
   swagger: {
