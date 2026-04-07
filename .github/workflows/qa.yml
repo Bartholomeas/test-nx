@@ -17,6 +17,10 @@ on:
     branches:
       - qa
 
+permissions:
+  contents: write
+  actions: read
+
 env:
   ENV: QA
   AWS_REGION: us-east-1
