@@ -13,7 +13,7 @@ import { AppModule } from './app/app.module';
 bootstrapApp({
   appModule: AppModule,
   swagger: {
-    title: 'Users2 API test',
+    title: 'Users2 API test v222',
     description: 'Users backend API',
   },
 });
