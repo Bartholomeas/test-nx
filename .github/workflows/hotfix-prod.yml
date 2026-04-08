@@ -1,0 +1,45 @@
+name: hotfix-prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why emergency promotion to production is needed'
+        required: true
+        type: string
+      confirm:
+        description: 'I confirm this promotes latest stg-* tags directly to prod-*'
+        required: true
+        type: boolean
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate dispatch confirmation
+        run: |
+          if [ "${{ inputs.confirm }}" != "true" ]; then
+            echo "Set confirm=true to run hotfix promotion."
+            exit 1
+          fi
+
+      - name: Validate branch
+        run: |
+          if [ "${{ github.ref_name }}" != "staging" ] && [ "${{ github.ref_name }}" != "master" ]; then
+            echo "Run this workflow from staging (preferred) or master only."
+            exit 1
+          fi
+
+      - name: Print hotfix reason
+        run: 'echo "Hotfix reason: ${{ inputs.reason }}"'
+
+  promote:
+    needs: [validate]
+    uses: ./.github/workflows/release.yml
+    with:
+      release_env: prod
+    secrets: inherit

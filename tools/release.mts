@@ -124,21 +124,24 @@ async function generateProdChangelog(): Promise<void> {
     string,
     { currentVersion: string; newVersion: string; dependentProjects: [] }
   > = {};
+  let hasChanges = false;
 
   for (const project of PROJECTS) {
     const newVersion = getLatestEnvTag('stg', project);
     const prevProdVersion = getLatestEnvTag('prod', project);
 
-    if (newVersion && newVersion !== prevProdVersion) {
-      versionData[project] = {
-        currentVersion: prevProdVersion ?? '0.0.0',
-        newVersion,
-        dependentProjects: [],
-      };
-    }
+    // Nx changelog expects versionData to align with the configured release projects.
+    // Include all projects with stg tags, and gate execution via hasChanges.
+    if (!newVersion) continue;
+    versionData[project] = {
+      currentVersion: prevProdVersion ?? '0.0.0',
+      newVersion,
+      dependentProjects: [],
+    };
+    if (newVersion !== prevProdVersion) hasChanges = true;
   }
 
-  if (Object.keys(versionData).length > 0) {
+  if (Object.keys(versionData).length > 0 && hasChanges) {
     console.log('Generating changelog for production release...');
     await releaseChangelog({
       versionData,
