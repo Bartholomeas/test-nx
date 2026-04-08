@@ -1,5 +1,7 @@
+import { Role } from '@mono-repo-backend/shared-types';
+import { IsEmail, IsString } from 'class-validator';
+
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsString } from "class-validator";
 
 export class UserProfileResponseDto {
   @ApiProperty({ type: String, example: '123e4567-e89b-12d3-a456-426614174000' })
@@ -14,7 +16,7 @@ export class UserProfileResponseDto {
   @IsString()
   name!: string;
 
-  @ApiProperty({ type: String, example: 'user', enum: ['user', 'admin', 'manage'] })
+  @ApiProperty({ type: String, example: 'user', enum: Role })
   @IsString()
   role!: string;
 }

@@ -20,7 +20,12 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "@mono-repo-backend/common": ["libs/common/src/index.ts"]
+      "@mono-repo-backend/common": ["libs/common/src/index.ts"],
+      "@mono-repo-backend/database": ["libs/database/src/index.ts"],
+      "@mono-repo-backend/shared-types": ["libs/shared-types/src/index.ts"],
+      "@mono-repo-backend/shared-errors": ["libs/shared-errors/src/index.ts"],
+      "@mono-repo-backend/shared-aws": ["libs/shared-aws/src/index.ts"],
+      "@mono-repo-backend/shared-auth": ["libs/shared-auth/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
