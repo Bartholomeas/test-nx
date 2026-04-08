@@ -128,10 +128,7 @@ jobs:
     needs: [detect, admin2-backend, manage2-backend, users2-backend]
     if: |
       always() &&
-      needs.detect.result == 'success' &&
-      (needs.admin2-backend.result == 'success' || needs.admin2-backend.result == 'skipped') &&
-      (needs.manage2-backend.result == 'success' || needs.manage2-backend.result == 'skipped') &&
-      (needs.users2-backend.result == 'success' || needs.users2-backend.result == 'skipped')
+      needs.detect.result == 'success'
     uses: ./.github/workflows/release.yml
     with:
       release_env: stg
