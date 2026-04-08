@@ -14,6 +14,6 @@ bootstrapApp({
   appModule: AppModule,
   swagger: {
     title: 'Users2 API test v222',
-    description: 'Users backend API',
+    description: 'Users backend API description v222',
   },
 });
