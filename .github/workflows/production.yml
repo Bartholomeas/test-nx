@@ -1,0 +1,138 @@
+name: production
+
+on:
+  workflow_dispatch:
+    inputs:
+      app:
+        description: 'Which app to deploy (leave empty for affected only)'
+        required: false
+        type: choice
+        options:
+          - ''
+          - admin2-backend
+          - manage2-backend
+          - users2-backend
+          - all
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: write
+  actions: read
+
+env:
+  ENV: PRODUCTION
+  AWS_REGION: us-east-1
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.check.outputs.is_release }}
+    steps:
+      - name: Check if release commit
+        id: check
+        run: |
+          if [[ "${{ github.event.head_commit.message }}" == chore\(release\):* ]]; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
+
+  params:
+    needs: [check-release]
+    if: needs.check-release.outputs.is_release != 'true'
+    name: Setup Dynamic Environment Variables
+    runs-on: ubuntu-latest
+    outputs:
+      secrets_env: ${{ env.SECRETS_ENV }}
+    steps:
+      - run: |
+          echo "SECRETS_ENV=${{ env.ENV }}" >> $GITHUB_ENV
+
+  detect:
+    needs: [check-release]
+    if: needs.check-release.outputs.is_release != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      admin2-backend: ${{ steps.check.outputs.admin2-backend }}
+      manage2-backend: ${{ steps.check.outputs.manage2-backend }}
+      users2-backend: ${{ steps.check.outputs.users2-backend }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --no-fund
+
+      - uses: nrwl/nx-set-shas@v4
+        with:
+          main-branch-name: master
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Detect affected apps
+        id: check
+        run: |
+          if [ "${{ github.event.inputs.app }}" = "all" ]; then
+            echo "admin2-backend=true" >> $GITHUB_OUTPUT
+            echo "manage2-backend=true" >> $GITHUB_OUTPUT
+            echo "users2-backend=true" >> $GITHUB_OUTPUT
+          elif [ -n "${{ github.event.inputs.app }}" ]; then
+            echo "admin2-backend=$([[ "${{ github.event.inputs.app }}" == "admin2-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "manage2-backend=$([[ "${{ github.event.inputs.app }}" == "manage2-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "users2-backend=$([[ "${{ github.event.inputs.app }}" == "users2-backend" ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+          else
+            AFFECTED=$(npx nx show projects --affected --type=app --base "$NX_BASE" --head "$NX_HEAD")
+            echo "admin2-backend=$([[ "$AFFECTED" == *"admin2-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "manage2-backend=$([[ "$AFFECTED" == *"manage2-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+            echo "users2-backend=$([[ "$AFFECTED" == *"users2-backend"* ]] && echo true || echo false)" >> $GITHUB_OUTPUT
+          fi
+
+  admin2-backend:
+    needs: [detect, params]
+    if: needs.detect.outputs.admin2-backend == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      secrets_env: ${{ needs.params.outputs.secrets_env }}
+      app_name: admin2-backend
+    secrets: inherit
+
+  manage2-backend:
+    needs: [detect, params]
+    if: needs.detect.outputs.manage2-backend == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      secrets_env: ${{ needs.params.outputs.secrets_env }}
+      app_name: manage2-backend
+    secrets: inherit
+
+  users2-backend:
+    needs: [detect, params]
+    if: needs.detect.outputs.users2-backend == 'true'
+    uses: ./.github/workflows/build.yml
+    with:
+      secrets_env: ${{ needs.params.outputs.secrets_env }}
+      app_name: users2-backend
+    secrets: inherit
+
+  tag:
+    needs: [detect, admin2-backend, manage2-backend, users2-backend]
+    if: |
+      always() &&
+      needs.detect.result == 'success' &&
+      (needs.admin2-backend.result == 'success' || needs.admin2-backend.result == 'skipped') &&
+      (needs.manage2-backend.result == 'success' || needs.manage2-backend.result == 'skipped') &&
+      (needs.users2-backend.result == 'success' || needs.users2-backend.result == 'skipped')
+    uses: ./.github/workflows/release.yml
+    with:
+      release_env: prod
+    secrets: inherit
