@@ -62,7 +62,7 @@
         "createRelease": "github"
       },
       "git": {
-        "commit": false,
+        "commit": true,
         "tag": false
       }
     }
