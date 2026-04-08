@@ -145,9 +145,10 @@ async function generateProdChangelog(): Promise<void> {
     console.log('Generating changelog for production release...');
     await releaseChangelog({
       versionData,
-      gitCommit: false,
+      gitCommit: true,
       gitTag: false,
     });
+    execSync('git push origin HEAD', { stdio: 'inherit' });
   } else {
     console.log('No version changes for production changelog.');
   }
