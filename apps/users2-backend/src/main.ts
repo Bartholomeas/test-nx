@@ -1,60 +1,19 @@
-import helmet from 'helmet';
-import { Logger } from 'nestjs-pino';
-
-import { ClassSerializerInterceptor, ValidationPipe } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { NestFactory, Reflector } from '@nestjs/core';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { bootstrapApp } from '@mono-repo-backend/common';
 
 import { AppModule } from './app/app.module';
 
-async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
-  const configService = app.get(ConfigService);
+// Comment test c
+// Comment test c damksjdkajsdasjd
+// Comment test c damksjdkajsdasjd
+// Comment test c damksjdkajsdasjd
+// Comment test c damksjdkajsdasjd
+// Promote to release prod ok fffff
+// Promote to release prod ok test test
 
-  const NODE_ENV = configService.getOrThrow('NODE_ENV');
-  const APP_PORT = configService.get('PORT');
-
-  app.useLogger(app.get(Logger));
-
-  // TODO: Add proper origins when they will be available
-  const CORS_ORIGINS = {
-    local: '*',
-    development: '*',
-    qa: '*',
-    staging: '*',
-    production: '*',
-  };
-
-  if (process.env.NODE_ENV !== 'production') {
-    const config = new DocumentBuilder()
-      .setTitle('Users2 API')
-      .setDescription('Users backend API')
-      .setVersion('1.0')
-      .build();
-    const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('docs', app, document);
-  }
-
-  app.enableCors({
-    origin: CORS_ORIGINS[NODE_ENV as keyof typeof CORS_ORIGINS],
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    credentials: true,
-    allowedHeaders: '*',
-  });
-
-  app.use(helmet());
-  app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-
-  await app.listen(APP_PORT);
-  app.get(Logger).log(`🚀 Application is running on: http://localhost:${APP_PORT}`);
-}
-
-bootstrap();
+bootstrapApp({
+  appModule: AppModule,
+  swagger: {
+    title: 'Users2 API test',
+    description: 'Users backend API',
+  },
+});

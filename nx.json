@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "analytics": false,
+  "defaultBase": "development",
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "production": [
@@ -44,19 +45,26 @@
   "release": {
     "projectsRelationship": "independent",
     "projects": ["users2-backend", "manage2-backend", "admin2-backend"],
+    "releaseTag": {
+      "pattern": "{projectName}@{version}"
+    },
     "version": {
       "conventionalCommits": true,
-      "fallbackCurrentVersionResolver": "disk"
+      "git": {
+        "commit": true,
+        "tag": true,
+        "commitMessage": "chore(release): bump package versions [no ci]"
+      }
     },
     "changelog": {
       "automaticFromRef": true,
       "projectChangelogs": {
         "createRelease": "github"
+      },
+      "git": {
+        "commit": true,
+        "tag": false
       }
-    },
-    "git": {
-      "commit": false,
-      "tag": false
     }
   }
 }

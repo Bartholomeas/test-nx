@@ -1,19 +1,19 @@
 import { releaseChangelog, releaseVersion } from 'nx/release';
-import { execSync } from 'node:child_process';
 
-const ENV = process.env.RELEASE_ENV; // dev | qa | staging | prod
+import { execFileSync, execSync } from 'node:child_process';
+
+const ENV = process.env['RELEASE_ENV']; // dev | qa | stg | prod
 if (!ENV) {
   console.error('RELEASE_ENV is required');
   process.exit(1);
 }
 
-const isProduction = ENV === 'prod';
 const PROJECTS = ['users2-backend', 'manage2-backend', 'admin2-backend'];
 
 const PREV_ENV: Record<string, string> = {
   qa: 'dev',
-  staging: 'qa',
-  prod: 'staging',
+  stg: 'qa',
+  prod: 'stg',
 };
 
 function getLatestEnvTag(envPrefix: string, project: string): string | null {
@@ -33,29 +33,72 @@ function getLatestEnvTag(envPrefix: string, project: string): string | null {
   }
 }
 
-if (ENV === 'dev') {
-  // Development: calculate version from conventional commits
+function tagExists(tag: string): boolean {
+  try {
+    return execSync(`git tag -l "${tag}"`, { encoding: 'utf-8' }).trim() === tag;
+  } catch {
+    return false;
+  }
+}
+
+function createTag(tag: string): boolean {
+  if (tagExists(tag)) {
+    console.log(`Tag already exists, skipping: ${tag}`);
+    return false;
+  }
+  console.log(`Creating tag: ${tag}`);
+  execSync(`git tag ${tag}`);
+  return true;
+}
+
+/** Lightweight env tags are not reliably pushed by `git push --follow-tags` (Nx uses annotated tags). */
+function pushTagRefsToOrigin(tagNames: string[]): void {
+  if (tagNames.length === 0) return;
+  const refs = tagNames.map((t) => `refs/tags/${t}`);
+  execFileSync('git', ['push', 'origin', ...refs], { stdio: 'inherit' });
+}
+
+function getHead(): string {
+  return execSync('git rev-parse HEAD', { encoding: 'utf-8' }).trim();
+}
+
+async function releaseDev(): Promise<void> {
+  const headBefore = getHead();
+
   const { projectsVersionData } = await releaseVersion({
     dryRun: false,
-    gitCommit: false,
-    gitTag: false,
-    stageChanges: false,
+    // Push only after we add dev-* tags (same remote update as Nx commit + canonical tags)
+    gitPush: false,
   });
 
+  const newDevTags: string[] = [];
   for (const [project, data] of Object.entries(projectsVersionData)) {
     const version = data.newVersion ?? data.currentVersion;
     if (!version) continue;
-
-    const tag = `dev-${project}@${version}`;
-    console.log(`Tagging: ${tag}`);
-    execSync(`git tag ${tag}`);
+    const name = `dev-${project}@${version}`;
+    if (createTag(name)) newDevTags.push(name);
   }
 
-  execSync('git push --tags');
-} else {
-  // QA / Staging / Prod: promote version from previous environment
-  const prevEnv = PREV_ENV[ENV];
-  const tags: string[] = [];
+  const headAfter = getHead();
+  const nxCommitted = headBefore !== headAfter;
+
+  if (nxCommitted || newDevTags.length > 0) {
+    execSync('git push --follow-tags', { stdio: 'inherit' });
+    pushTagRefsToOrigin(newDevTags);
+  } else {
+    console.log('No version changes and no new dev tags; nothing to push.');
+  }
+}
+
+async function promoteEnv(): Promise<void> {
+  const prevEnv = PREV_ENV[ENV as keyof typeof PREV_ENV];
+  const newPromoTags: string[] = [];
+
+  // Prod only: changelog + GitHub release.
+  // Must run before creating prod-* tags; otherwise prevProdVersion == newVersion.
+  if (ENV === 'prod') {
+    await generateProdChangelog();
+  }
 
   for (const project of PROJECTS) {
     const version = getLatestEnvTag(prevEnv, project);
@@ -66,34 +109,54 @@ if (ENV === 'dev') {
 
     const tag = `${ENV}-${project}@${version}`;
     console.log(`Promoting: ${prevEnv}-${project}@${version} → ${tag}`);
-    execSync(`git tag ${tag}`);
-    tags.push(tag);
+    if (createTag(tag)) newPromoTags.push(tag);
   }
 
-  // Prod only: changelog + GitHub release
-  if (isProduction && tags.length > 0) {
-    const versionData: Record<string, { currentVersion: string; newVersion: string }> = {};
+  if (newPromoTags.length > 0) {
+    pushTagRefsToOrigin(newPromoTags);
+  } else {
+    console.log(`No new ${ENV} tags to push.`);
+  }
+}
 
-    for (const project of PROJECTS) {
-      const newVersion = getLatestEnvTag('staging', project);
-      const prevProdVersion = getLatestEnvTag('prod', project);
+async function generateProdChangelog(): Promise<void> {
+  const versionData: Record<
+    string,
+    { currentVersion: string; newVersion: string; dependentProjects: [] }
+  > = {};
+  let hasChanges = false;
 
-      if (newVersion && newVersion !== prevProdVersion) {
-        versionData[project] = {
-          currentVersion: prevProdVersion ?? '0.0.0',
-          newVersion,
-        };
-      }
-    }
+  for (const project of PROJECTS) {
+    const newVersion = getLatestEnvTag('stg', project);
+    const prevProdVersion = getLatestEnvTag('prod', project);
 
-    if (Object.keys(versionData).length > 0) {
-      await releaseChangelog({
-        versionData,
-        gitCommit: false,
-        gitTag: false,
-      });
-    }
+    // Nx changelog expects versionData to align with the configured release projects.
+    // Include all projects with stg tags, and gate execution via hasChanges.
+    if (!newVersion) continue;
+    versionData[project] = {
+      currentVersion: prevProdVersion ?? '0.0.0',
+      newVersion,
+      dependentProjects: [],
+    };
+    if (newVersion !== prevProdVersion) hasChanges = true;
   }
 
-  execSync('git push --tags');
+  if (Object.keys(versionData).length > 0 && hasChanges) {
+    console.log('Generating changelog for production release...');
+    await releaseChangelog({
+      versionData,
+      gitCommit: true,
+      gitTag: false,
+    });
+    execSync('git push origin HEAD', { stdio: 'inherit' });
+  } else {
+    console.log('No version changes for production changelog.');
+  }
+}
+
+// --- Main ---
+if (ENV === 'dev') {
+  await releaseDev();
+} else {
+  await promoteEnv();
 }
