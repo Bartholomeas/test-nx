@@ -94,6 +94,12 @@ async function promoteEnv(): Promise<void> {
   const prevEnv = PREV_ENV[ENV as keyof typeof PREV_ENV];
   const newPromoTags: string[] = [];
 
+  // Prod only: changelog + GitHub release.
+  // Must run before creating prod-* tags; otherwise prevProdVersion == newVersion.
+  if (ENV === 'prod') {
+    await generateProdChangelog();
+  }
+
   for (const project of PROJECTS) {
     const version = getLatestEnvTag(prevEnv, project);
     if (!version) {
@@ -104,11 +110,6 @@ async function promoteEnv(): Promise<void> {
     const tag = `${ENV}-${project}@${version}`;
     console.log(`Promoting: ${prevEnv}-${project}@${version} → ${tag}`);
     if (createTag(tag)) newPromoTags.push(tag);
-  }
-
-  // Prod only: changelog + GitHub release
-  if (ENV === 'prod') {
-    await generateProdChangelog();
   }
 
   if (newPromoTags.length > 0) {
